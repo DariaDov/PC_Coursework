@@ -1,0 +1,29 @@
+@startuml
+title Sequence: Build inverted index
+
+actor Admin
+participant "IndexHandler" as H
+participant "IndexService" as IS
+participant "ThreadPool" as TP
+participant "Worker n" as W
+participant "IndexTask" as T
+participant "InvertedIndex" as II
+
+Admin -> H : POST /api/index {"threads": n}
+H -> IS : buildIndex(n)
+activate IS
+IS -> IS : start timer
+IS -> TP : new ThreadPool(n)
+IS -> TP : submit(new IndexTask(file))
+
+TP -> W : take task from queue
+W -> T : run()
+T -> T : tokenize(text)
+T -> II : addDocument()
+
+IS -> TP : awaitCompletion()
+IS -> IS : stop timer
+IS --> H : IndexResult(docs, time_ms)
+deactivate IS
+H --> Admin : {"status":"ok","documents_indexed":...,"time_ms":...}
+@enduml

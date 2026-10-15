@@ -1,0 +1,36 @@
+@startuml
+title Sequence: Search from CLI
+
+actor User
+participant "CLI Client" as CLI
+participant "HttpServer" as S
+participant "SearchHandler" as H
+participant "SearchService" as SS
+participant "QueryExpander" as QE
+participant "OllamaRequestQueue" as Q
+participant "OllamaClient" as OC
+participant "External Ollama" as O
+participant "InvertedIndex" as II
+participant "Scorer" as SC
+
+User -> CLI : ./search "some text..."
+CLI -> S : POST /api/search {"query":..., "mode":"keyword"}
+S -> H : handle(request)
+H -> SS : search(query, "keyword")
+SS -> QE : expand(query)
+QE -> Q : submit(prompt)
+Q -> OC : generate(prompt)
+OC -> O : POST /api/generate
+O --> OC : generated text
+OC --> Q : response
+Q --> QE : response
+QE --> SS : expanded keyword
+SS -> II : getDocument(keyword)
+II --> SS : document index
+SS -> SC : score(documents, keywords)
+SC --> SS : List<SearchResult>
+SS --> H : response
+H --> S : JSON
+S --> CLI : {"results":[...],"time_ms":...}
+CLI --> User : formatted output
+@enduml

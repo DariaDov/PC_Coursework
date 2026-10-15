@@ -1,0 +1,113 @@
+@startuml
+title Class Diagram
+
+hide empty members
+
+class HttpServer
+
+class StatusHandler {
+  handle(request)
+}
+
+class IndexHandler
+
+class StatsHandler
+
+class SearchHandler {
+  handle(request)
+}
+
+class WebSocketSearchHandler {
+  onStage(stage, data)
+  onDone()
+}
+
+class IndexService {
+  buildIndex(n)
+  getStats()
+}
+
+class SearchService {
+  search(query, mode)
+  searchStreaming(query, listener)
+}
+
+class ThreadPool {
+  ThreadPool(n)
+  submit(task)
+  awaitCompletion()
+}
+
+class IndexTask {
+  IndexTask(file)
+  run()
+  tokenize(text)
+}
+
+class InvertedIndex {
+  addDocument()
+  getDocument(keyword)
+}
+
+class QueryExpander {
+  expand(query)
+}
+
+class OllamaRequestQueue {
+  submit(prompt)
+}
+
+class OllamaClient {
+  isAvailable()
+  generate(prompt)
+}
+
+class ExternalOllama
+
+class Scorer {
+  score(documents, keywords)
+}
+
+class IndexResult {
+  docs
+  time_ms
+}
+
+class IndexStats {
+  documents
+  index_build_time_ms
+  threads_used
+}
+
+class SearchResult
+
+' Check server status
+HttpServer --> StatusHandler
+StatusHandler --> OllamaClient 
+OllamaClient --> ExternalOllama 
+
+' Build inverted index
+IndexHandler --> IndexService
+IndexService --> ThreadPool 
+ThreadPool --> IndexTask 
+IndexTask --> InvertedIndex 
+IndexService ..> IndexResult 
+
+' View statistics
+StatsHandler --> IndexService 
+IndexService ..> IndexStats 
+
+' Search from CLI
+HttpServer --> SearchHandler
+SearchHandler --> SearchService
+SearchService --> QueryExpander 
+QueryExpander --> OllamaRequestQueue 
+OllamaRequestQueue --> OllamaClient
+SearchService --> InvertedIndex 
+SearchService --> Scorer 
+Scorer ..> SearchResult 
+
+' Search from Web UI
+WebSocketSearchHandler --> SearchService
+QueryExpander --> ExternalOllama
+@enduml

@@ -1,0 +1,31 @@
+@startuml
+title Sequence: Search from Web UI
+
+actor User
+participant "Web UI" as UI
+participant "WebSocketSearchHandler" as WS
+participant "SearchService" as SS
+participant "QueryExpander" as QE
+participant "External Ollama" as O
+participant "InvertedIndex" as II
+
+User -> UI : enter query, press Search
+UI -> WS : connect /ws/search
+WS -> SS : searchStreaming(query, listener)
+
+SS -> QE : expand(query)
+QE -> O : POST /api/generate
+O --> QE : keywords
+QE --> SS : expanded keyword
+SS --> WS : onStage("query_expansion", data)
+WS --> UI : {"stage":"query_expansion","data":{"original":...,"expanded_terms":[...]}}
+
+SS -> II : lookup and scoring for each keyword
+II --> SS : results
+SS --> WS : onStage("keyword_search", data)
+WS --> UI : {"stage":"keyword_search","data":{"results":[...],"time_ms":...}}
+
+SS --> WS : onDone()
+WS --> UI : {"stage":"done"}
+UI --> User : formatted output
+@enduml

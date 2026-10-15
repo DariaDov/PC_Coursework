@@ -1,0 +1,28 @@
+@startuml
+title Deployment Diagram
+skinparam nodeStyle rectangle
+
+node "Host" {
+  node "Docker" {
+    node "search-server" as SRV {
+      artifact "search-server" as APP
+    }
+    node "ollama" as OLL {
+      artifact "Ollama server" as OSRV
+    }
+  }
+}
+
+node "Client side" {
+  node "Browser" as BR {
+    component "Web UI" as WUI
+  }
+  node "Terminal" as TERM {
+    component "CLI client" as CLI
+  }
+}
+
+WUI --> APP 
+CLI --> APP
+SRV ..> OLL
+@enduml

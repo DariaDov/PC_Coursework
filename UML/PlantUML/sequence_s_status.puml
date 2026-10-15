@@ -1,0 +1,20 @@
+@startuml
+title Sequence: Check server status
+
+actor Admin
+participant "HttpServer" as S
+participant "StatusHandler" as H
+participant "OllamaClient" as C
+participant "ExternalOllama" as O
+
+Admin -> S : GET /api/health
+S -> H : handle(request)
+H -> C : isAvailable()
+C -> O : GET /api/tags
+
+O --> C : 200 OK / error
+C --> H : true / false
+
+H --> S : {"status":"ok","ollama":true|false}
+S --> Admin : 200 OK
+@enduml

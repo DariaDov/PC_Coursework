@@ -1,0 +1,12 @@
+@startuml
+title Sequence: View statistics
+
+actor Admin
+participant "StatsHandler" as H
+participant "IndexService" as IS
+
+Admin -> H : GET /api/stats
+H -> IS : getStats()
+IS --> H : IndexStats
+H --> Admin : {"documents":...,"index_build_time_ms":...,"threads_used":...}
+@enduml

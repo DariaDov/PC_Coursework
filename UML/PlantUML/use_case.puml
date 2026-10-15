@@ -1,0 +1,30 @@
+@startuml
+left to right direction
+
+actor "Admin" as Admin
+actor "User" as User
+actor "Ollama" as Ollama
+
+rectangle "Parallel Search System\n" {
+  usecase "Check server status" as UC0
+  usecase "Build inverted index\n(threads = n)" as UC1
+  usecase "Search from CLI" as UC2
+  usecase "Search from Web UI" as UC3
+  usecase "View statistics" as UC4
+  usecase "Expand query (LLM)" as UC5
+  usecase "Keyword search" as UC6
+}
+
+Admin -- UC0
+UC0 -- Ollama : check availability
+Admin -- UC1
+Admin -- UC4
+
+User -- UC2
+UC2 ..> UC6 : <<include>>
+User -- UC3
+UC3 ..> UC6 : <<include>>
+
+UC6 ..> UC5 : <<include>>
+UC5 -- Ollama
+@enduml
