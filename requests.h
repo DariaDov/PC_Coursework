@@ -11,6 +11,7 @@
 #include <vector>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <fstream>
 #include "string_utils.h"
 
 void send_http_response(int client, int status, const std::string& status_text, const std::string& body) {
@@ -38,6 +39,22 @@ void header_parser(const std::string& headers, std::map<std::string, std::string
     }
 }
 
+std::string extract_param(const std::string& header, std::string param, int& error) {
+    param = param + "=\"";
+    size_t start = header.find(param);
+    if (start == std::string::npos) {
+        error = 0;
+        return "";
+    }
+    start += param.length();
+    size_t end = header.find_first_of("\";", start);
+    if (end == std::string::npos || header[end] == ';') {
+        error = -1;
+        return "";
+    }
+    return header.substr(start, end - start);
+}
+
 void index_request(int socket, const std::map<std::string, std::string>& header_map, std::string& body) {
     if (!header_map.contains("content-length") || !header_map.contains("content-type")) {
         send_http_response(socket, 400, "Bad Request", "Missing Content-Length or Content-Type.\n");
@@ -53,6 +70,87 @@ void index_request(int socket, const std::map<std::string, std::string>& header_
         if (bytes <= 0) break;
         body.append(temp, bytes);
     }
+
+    if (body.size() < content_length) {
+        send_http_response(socket, 400, "Bad Request", "Incomplete request body.\n");
+        close(socket);
+        return;
+    }
+
+    std::string boundary_prefix = "boundary=";
+    size_t b_pos = header_map.at("content-type").find(boundary_prefix);
+    if (b_pos == std::string::npos) {
+        send_http_response(socket, 400, "Bad Request", "Missing multipart boundary.\n");
+        close(socket);
+        return;
+    }
+
+    std::string boundary = "--" + header_map.at("content-type").substr(b_pos + boundary_prefix.length());
+
+    std::string param_value;
+    std::string file_data;
+    size_t pos = 0;
+
+    while ((pos = body.find(boundary, pos)) != std::string::npos) {
+        if (body.compare(pos + boundary.length(), 2, "--") == 0) break;
+
+        size_t part_header_end = body.find("\r\n\r\n", pos);
+        if (part_header_end == std::string::npos) break;
+
+        std::string headers = body.substr(pos, part_header_end - pos);
+        size_t data_start = part_header_end + 4;
+
+        size_t next_boundary = body.find("\r\n" + boundary, data_start);
+        if (next_boundary == std::string::npos) break;
+
+        std::string content = body.substr(data_start, next_boundary - data_start);
+
+        std::map<std::string, std::string> b_header_map;
+        header_parser(headers, b_header_map);
+        int error = 0;
+        std::string filename = extract_param(b_header_map["content-disposition"], "filename", error);
+        if (error < 0) {
+            send_http_response(socket, 400, "Bad Request", "Incorrect value for filename parameter.\n");
+            close(socket);
+            return;
+        }
+
+        std::string name = extract_param(b_header_map["content-disposition"], "name", error);
+        if (error < 0) {
+            send_http_response(socket, 400, "Bad Request", "Incorrect value for name parameter.\n");
+            close(socket);
+            return;
+        }
+
+        if (!filename.empty()) {
+            file_data = content;
+        } else if (!name.empty()) {
+            param_value = content;
+        }
+
+        pos = next_boundary + 2;
+    }
+
+    if (file_data.size() == 0 || param_value.size() == 0) {
+        send_http_response(socket, 400, "Bad Request", "Missing file or param section.\n");
+        close(socket);
+        return;
+    }
+
+    std::string reply;
+    std::ofstream out("TEST.txt", std::ios::binary);
+    if (out) {
+        out.write(file_data.data(), file_data.size());
+        out.close();
+        reply += "Saved file:  (" + std::to_string(file_data.size()) + " bytes)\n";
+    } else {
+        reply += "Error: Failed to write file to disk.\n";
+    }
+
+    reply += "Parameter = " + param_value + "\n";
+
+    send_http_response(socket, 200, "OK", reply);
+    close(socket);
 }
 
 void handle_request(int socket) {
