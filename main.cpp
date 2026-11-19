@@ -2,13 +2,15 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <thread>
-#include "index.h"
+#include "data_struct.h"
 #include "network.h"
 #include "requests.h"
 
 int sock = socket(AF_INET, SOCK_STREAM, 0);
 
 int main(int, char**){
+    std::cout.setf(std::ios::unitbuf);
+
     if (sock == -1) {
         std::cerr << "Помилка виклику socket" << std::endl;
         return 1;
