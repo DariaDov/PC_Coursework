@@ -12,18 +12,19 @@
 // std::shared_lock lock(mtx);
 // std::unique_lock lock(mtx);
 
-template<typename T, auto W>
+template<typename T>
 class ThreadPool {
 public:
     ThreadPool() = default;
-    ThreadPool(const ThreadPool<T, W>& src) {} 
+    ThreadPool(const ThreadPool<T>& src) {} 
     ~ThreadPool() { terminate(); }
 
     std::atomic<int> tasks_complited{0};
-    std::atomic<int> queue_size{0};
 
-    void initialize(int pool_size) {
+    void initialize(int pool_size, int (*worker)(const T&)) {
         std::unique_lock lock(mtx);
+
+        this->worker = worker;
 
         if (initialized || terminated) return;
 
@@ -35,15 +36,15 @@ public:
         initialized = !workers.empty();
 
         tasks_complited = 0;
-        queue_size = 0;
     }
 
     void enqueue(T task) {
-        if (!working()) {
-            return;
+        { 
+            std::unique_lock lock(mtx); 
+            if (!working_unsafe()) return; 
+            tasks.emplace(std::move(task)); 
         }
-
-        tasks.emplace(task);
+        
         condition.notify_one();
     }
 
@@ -79,31 +80,36 @@ private:
     bool force_terminated = false;
     bool terminated = false;
     bool paused = false;
+    int (*worker)(const T&);
 
     void routine() {
         int id = worker_id.fetch_add(1);
+
         while (true) {
             if (terminated || force_terminated) {
                 return; 
             }
 
             T task;
+            bool to_process = false;
             {
                 std::unique_lock lock(mtx);
+
                 auto wait_condition = [this] {
-                    return !terminated && !force_terminated && !tasks.empty() && !paused;
+                    return terminated || force_terminated || (!tasks.empty() && !paused);
                 };
 
                 condition.wait(lock, wait_condition);
 
-                if (!tasks.empty()) {
-                    queue_size.fetch_add(tasks.size());
-                    tasks.pop(task);
-                }
+                if (force_terminated) return;
+                if (!tasks.empty() && !paused) { tasks.pop(task); to_process = true; }
+                else if (terminated) return;
             }
-            
-            // some function
-            W(task);
+
+            if (to_process) {
+                worker(task);
+                tasks_complited.fetch_add(1);
+            }
 
             // if (task.callback) {
             //     task.callback(task);
