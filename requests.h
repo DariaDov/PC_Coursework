@@ -14,6 +14,7 @@
 #include <fstream>
 #include "string_utils.h"
 #include "api_index.h"
+#include "api_stats.h"
 
 
 void handle_request(int socket) {
@@ -52,7 +53,8 @@ void handle_request(int socket) {
 
     }
     else if (raw_headers.find("/api/stats ", 0) != std::string::npos) {
-
+        stats_request(socket, header_map, body);
+        return;
     }
     else if (raw_headers.find("/api/health ", 0) != std::string::npos) {
         send_http_response(socket, 200, "OK", "Server is healthy.\n");

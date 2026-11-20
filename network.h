@@ -18,9 +18,9 @@ sockaddr_in serv_addr = {
     .sin_addr = {.s_addr = inet_addr("127.0.0.1")}
 };
 
-void send_http_response(int client, int status, const std::string& status_text, const std::string& body) {
+void send_http_response(int client, int status, const std::string& status_text, const std::string& body, std::string content_type="text/plain") {
     std::string response = "HTTP/1.1 " + std::to_string(status) + " " + status_text + "\r\n"
-        "Content-Type: text/plain\r\n"
+        "Content-Type: " + content_type + "\r\n"
         "Content-Length: " + std::to_string(body.size()) + "\r\n"
         "Connection: close\r\n\r\n" + body;
     send(client, response.c_str(), static_cast<int>(response.size()), 0);
