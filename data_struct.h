@@ -4,7 +4,7 @@
 #include <set>
 
 #define HASHMAP_SIZE_FACTOR 16 // 2^16=65536
-#define THREADSAFEVECTOR_CAPACITY 1
+#define THREADSAFEVECTOR_CAPACITY 10
 
 template<typename T>
 class ThreadSafeVector {
@@ -76,7 +76,7 @@ public:
         _size = 0;
     }
         
-    T operator[](std::size_t idx) {
+    T& operator[](std::size_t idx) {
         std::shared_lock lock(mtx);
         return _data[idx];
     }
@@ -168,7 +168,7 @@ public:
         for (int i = 0; i <= last_element_index; i++) {
             std::cout << i << ":" << data[i].size();
             for (int n = 0; n < data[i].size(); n++) {
-                std::cout << ": " << data[i][n].first << " ";
+                std::cout << ": " << data[i][n].first << " (" << data[i][n].second.size() << ") ";
             }
             if (data[i].size() > 0) {
                 keys += data[i].size();
@@ -200,6 +200,18 @@ public:
                 data[idx].back().second.push_back(val);
             }
         }
+    }
+
+    V at(const K& key) const {
+        std::shared_lock lock(mtx);
+        auto idx = index(key);
+        if (no_key(idx)) return V();
+        auto& keys_values = data[idx];
+
+        for (int i = 0; i < keys_values.size(); i++) {
+            if (keys_values[i].first == key) return keys_values[i].second;
+        }
+        return V();
     }
 };
 

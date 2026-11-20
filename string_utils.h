@@ -19,3 +19,16 @@ std::pair<std::string, std::string> parse_key_value_string(std::string& str, con
     }
     return std::make_pair(std::string(), std::string());
 }
+
+std::string word_extractor(const std::string& str, std::string::size_type& pos) {
+    // skip initial delimiters
+    while (pos < str.size() && !std::isalpha(str[pos]) && !std::isdigit(str[pos])) pos++;
+
+    // collect word characters
+    std::string word;
+    while (pos < str.size() && (std::isalpha(str[pos]) || std::isdigit(str[pos]))) {
+	    word += str[pos];
+	    pos++;
+    }
+    return word;
+}

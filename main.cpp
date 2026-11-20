@@ -5,6 +5,7 @@
 #include "data_struct.h"
 #include "network.h"
 #include "requests.h"
+#include "ollama_service.h"
 
 int sock = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -30,6 +31,8 @@ int main(int, char**){
         close(sock);
         return 1;
     }
+
+    ollama_service.initialize(1, ollama_worker);
 
     std::cout << "--Listening--" << std::endl;
 

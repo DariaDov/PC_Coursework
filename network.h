@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <sstream>
 #include <map>
+#include "data.h"
 #include "string_utils.h"
 
 #define MY_PORT 5000
@@ -11,6 +12,8 @@
 #define CONTENT_TYPE "content-type"
 #define MULTYPART_BOUNDARY_PREFIX "boundary="
 #define CONTENT_DISPOSITION "content-disposition"
+#define TEXT_PLAIN "text/plain"
+#define APPLICATION_JSON "application/json"
 
 sockaddr_in serv_addr = {
     .sin_family = AF_INET,
@@ -18,7 +21,7 @@ sockaddr_in serv_addr = {
     .sin_addr = {.s_addr = inet_addr("127.0.0.1")}
 };
 
-void send_http_response(int client, int status, const std::string& status_text, const std::string& body, std::string content_type="text/plain") {
+void send_http_response(int client, int status, const std::string& status_text, const std::string& body, std::string content_type=TEXT_PLAIN) {
     std::string response = "HTTP/1.1 " + std::to_string(status) + " " + status_text + "\r\n"
         "Content-Type: " + content_type + "\r\n"
         "Content-Length: " + std::to_string(body.size()) + "\r\n"
@@ -26,7 +29,7 @@ void send_http_response(int client, int status, const std::string& status_text, 
     send(client, response.c_str(), static_cast<int>(response.size()), 0);
 }
 
-void header_parser(const std::string& headers, std::map<std::string, std::string>& header_map) {
+void header_parser(const std::string& headers, KeyValueMap& header_map) {
     std::istringstream headers_stream(headers);
     std::string line;
 

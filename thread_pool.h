@@ -21,7 +21,7 @@ public:
 
     std::atomic<int> tasks_complited{0};
 
-    void initialize(int pool_size, int (*worker)(const T&)) {
+    void initialize(int pool_size, int (*worker)(T&)) {
         std::unique_lock lock(mtx);
 
         this->worker = worker;
@@ -80,7 +80,7 @@ private:
     bool force_terminated = false;
     bool terminated = false;
     bool paused = false;
-    int (*worker)(const T&);
+    std::function<void(T&)> worker;
 
     void routine() {
         int id = worker_id.fetch_add(1);
@@ -111,9 +111,9 @@ private:
                 tasks_complited.fetch_add(1);
             }
 
-            // if (task.callback) {
-            //     task.callback(task);
-            // }
+            if (task.callback) {
+                task.callback(task);
+            }
         }
     }
 

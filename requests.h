@@ -15,6 +15,7 @@
 #include "string_utils.h"
 #include "api_index.h"
 #include "api_stats.h"
+#include "api_search.h"
 
 
 void handle_request(int socket) {
@@ -42,7 +43,7 @@ void handle_request(int socket) {
         return;
     }
 
-    std::map<std::string, std::string> header_map;
+    KeyValueMap header_map;
     header_parser(raw_headers, header_map);
    
     if (raw_headers.find("/api/index ", 0) != std::string::npos) {
@@ -50,7 +51,8 @@ void handle_request(int socket) {
         return;
     }
     else if (raw_headers.find("/api/search ", 0) != std::string::npos) {
-
+        search_request(socket, header_map, body);
+        return;
     }
     else if (raw_headers.find("/api/stats ", 0) != std::string::npos) {
         stats_request(socket, header_map, body);

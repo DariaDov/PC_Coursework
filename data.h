@@ -2,7 +2,10 @@
 
 #include <string>
 #include <vector>
+#include <map>
+#include <set>
 #include "data_struct.h"
+#include "thread_pool.h"
 
 struct Data {
     std::string title;
@@ -19,5 +22,7 @@ struct IndexStatistic {
 } index_stat;
 
 using DataArray = ThreadSafeVector<Data>;
+using KeyValueMap = std::map<std::string, std::string>; 
+using StringSet = std::set<std::string>;
 
 DataArray books;
