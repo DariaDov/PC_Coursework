@@ -173,16 +173,15 @@ void string_indexer(const std::size_t doc_id, const std::string& str, const Stop
         if (stop_words.contains(word)) continue;
         word_list.insert(word);
     }
-
-    for (auto word: word_list) {
-	    index.push_back(word, doc_id);
-    }
+    
+	index.push_back(word_list, doc_id);
 }
 
 void dataset_indexer(const size_t pos) {
-    std::string tag = books[pos].author + " " + books[pos].year + " " + books[pos].title;
+    Data book = books[pos];
+    std::string tag = book.author + " " + book.year + " " + book.title;
     string_indexer(pos, tag, stop_words, tag_index);
-    string_indexer(pos, books[pos].text, stop_words, text_index);
+    string_indexer(pos, book.text, stop_words, text_index);
 }
 
 int index_thread_worker(const IndexTask& task) {
@@ -304,9 +303,12 @@ void index_request(int socket, const std::map<std::string, std::string>& header_
 
     //
     IndexThreadPool t_pool;
-    t_pool.initialize(10, index_thread_worker);
+
+    int threads = std::stoull(param_value);
+    t_pool.initialize(threads, index_thread_worker);
 
     auto start = std::chrono::steady_clock::now();
+    books.clear();
     int tasks_cnt = index_task_producer(file_data, t_pool, books);
 
     while (t_pool.tasks_complited < tasks_cnt) {
@@ -314,12 +316,16 @@ void index_request(int socket, const std::map<std::string, std::string>& header_
     }
 
     auto end = std::chrono::steady_clock::now();
-    auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 
     send_http_response(socket, 200, "OK", "");
     close(socket);
 
-    text_index.print_stats();
+    text_index.print_stats(); //
+
+    index_stat.documents = books.size();
+    index_stat.index_build_time_ms = dur;
+    index_stat.threads_used = threads;
 
     std::cout << dur << std::endl;
 }
